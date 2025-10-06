@@ -1,5 +1,3 @@
-import concurrent.futures
-import asyncio
 from threading import Thread as Td
 import tkinter as tk
 from tkinter import font
@@ -71,8 +69,7 @@ class MainWin:
         self.max_token:int = 128000
         self.model_name = 'deepseek-chat'
 
-        self.thread_loop = concurrent.futures.ThreadPoolExecutor(max_workers=3)
-        self.loop = asyncio.new_event_loop()
+        #==== HERE BEGINS GUI LAYOUT ====
 
         self.root = tk.Tk()
         self.root.title('DeepSeek API Console')
@@ -107,12 +104,18 @@ class MainWin:
 
         self.pw.pack(fill='both', expand=True)
 
+        #==== HERE BEGINS TEXT WIDGET FORMATTING INITIATOR ====
+
         self.dialog.tag_config('reasons', foreground='dark green', font=self.font_editor_reasoning)
         self.dialog.tag_config('info', foreground='dark grey')
         self.dialog.tag_config('error', foreground='orange')
 
-        self.entry_input.bind('<Return>', self.on_send_message)
+        #==== HERE BEGINS EVENT BINDING ====
+
+        self.entry_input.bind('<Return>', self.on_send_message, add='')
         self.root.protocol('WM_DELETE_WINDOW', self.on_exit_main)
+
+        #==== HERE BEGINS MENU BINDING ====
 
         self.menu = Menu(self.root)
         self.root.config(menu=self.menu)
