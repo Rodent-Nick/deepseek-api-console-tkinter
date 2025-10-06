@@ -7,6 +7,7 @@ from tkinter import ttk
 from tkinter import Menu
 from tkinter import messagebox
 from openai import OpenAI, OpenAIError
+import os
 
 class KeyWin:
 
@@ -109,7 +110,6 @@ class MainWin:
         self.dialog.tag_config('reasons', foreground='dark green', font=self.font_editor_reasoning)
         self.dialog.tag_config('info', foreground='dark grey')
         self.dialog.tag_config('error', foreground='orange')
-        self.dialog.insert('1.0', 'Standby.\n\n', 'info')
 
         self.entry_input.bind('<Return>', self.on_send_message)
         self.root.protocol('WM_DELETE_WINDOW', self.on_exit_main)
@@ -132,10 +132,13 @@ class MainWin:
         self.menu.add_cascade(label='Misc', menu=self.menu_about, underline=1)
 
         try:
-            f = open('key.asc', 'r')
+            script_path = os.path.dirname(__file__)
+            f = open(f'{script_path}\\key.asc', 'r')
             self.key = f.readline()
-        except:
-            pass
+            self.dialog.insert('1.0', 'Standby. API Key loaded.\n\n', 'info')
+            f.close()
+        except FileNotFoundError as e:
+            self.dialog.insert('1.0', f'Standby. No API Key loaded. Reason: No such file (Working at {script_path})\n\n', 'info')
 
     def on_show_about(self, ev=None):
 
