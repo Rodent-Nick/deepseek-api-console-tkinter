@@ -208,7 +208,7 @@ class MainWin:
         self.entry_btn.config(state='disabled')
 
         self.update_dialog('[USER]', 'info')
-        self.update_dialog('\n%s\n\n'%(msg,))
+        self.update_dialog('\n%s\n'%(msg,))
 
         try:
             response = self.client.chat.completions.create(
@@ -278,7 +278,7 @@ class MainWin:
     def on_send_message(self, ev=None):
 
         # First, check if the input box is empty or not
-        u_input = self.entry_input.get('1.0','end')
+        u_input = self.entry_input.get('1.0','end').strip().strip('\n')
         if not u_input:
             return
         
