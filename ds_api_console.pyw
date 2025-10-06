@@ -54,7 +54,7 @@ class KeyWin:
 
 class MainWin:
 
-    def __init__(self, font1:str='Calibri', font2:str='Cascadia'):
+    def __init__(self, font1:str='Calibri', font2:str='Cascadia Code'):
 
         self.key:str= ''
         self.base_url:str = 'https://api.deepseek.com'
