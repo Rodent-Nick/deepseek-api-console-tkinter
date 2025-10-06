@@ -78,9 +78,9 @@ class MainWin:
         self.root.geometry('1200x600')
         self.root.config(bg='grey')
 
-        self.font_editor_normal = font.Font(family='Consolas', size=12)
-        self.font_editor_reasoning = font.Font(family='Consolas', size=12, slant='italic')
-        self.font_gui_normal = font.Font(family='Calibri', size=12)
+        self.font_editor_normal = font.Font(family=font2, size=12)
+        self.font_editor_reasoning = font.Font(family=font2, size=12, slant='italic')
+        self.font_gui_normal = font.Font(family=font1, size=12)
 
         self.pw = tk.PanedWindow(orient='vertical')
 
@@ -106,9 +106,9 @@ class MainWin:
 
         self.pw.pack(fill='both', expand=True)
 
-        self.dialog.tag_config('reasons', foreground='dark green', underline=False)
-        self.dialog.tag_config('info', foreground='dark grey', underline=False)
-        self.dialog.tag_config('error', foreground='orange', underline=False)
+        self.dialog.tag_config('reasons', foreground='dark green', font=self.font_editor_reasoning)
+        self.dialog.tag_config('info', foreground='dark grey')
+        self.dialog.tag_config('error', foreground='orange')
         self.dialog.insert('1.0', 'Standby.\n\n', 'info')
 
         self.entry_input.bind('<Return>', self.on_send_message)
