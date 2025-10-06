@@ -244,13 +244,13 @@ class MainWin:
                     self.update_dialog(content)
         
         except OpenAIError as e:
-            self.update_dialog(f'<!> ERROR: {e.message}\n\n')
+            self.update_dialog(f'<!> ERROR: {e.message}\n\n', 'error')
             self.key = ''
             self.client.close()
             self.client = None
 
         except e:
-            self.update_dialog(f'\n[AN UNKNOWN ERROR HAS OCCURRED.]\n\n')
+            self.update_dialog(f'\n[AN UNKNOWN ERROR HAS OCCURRED.]\n\n', 'error')
 
             self.entry_input.config(state='normal')
             self.entry_input.delete('1.0', 'end')
@@ -270,7 +270,7 @@ class MainWin:
                 self.history_reasoning.append(raw_reasoning)
         
         finally:
-            self.update_dialog('\n\n*** [END OF RESPONSE] ***\n\n')
+            self.update_dialog('\n\n*** [END OF RESPONSE] ***\n\n', 'info')
             self.entry_input.config(state='normal')
             self.entry_btn.config(state='normal')
             self.root.title('DeepSeek API Console')
