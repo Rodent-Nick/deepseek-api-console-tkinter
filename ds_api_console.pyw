@@ -131,6 +131,12 @@ class MainWin:
         self.menu_about.add_command(label='About', command=self.on_show_about)
         self.menu.add_cascade(label='Misc', menu=self.menu_about, underline=1)
 
+        try:
+            f = open('key.asc', 'r')
+            self.key = f.readline()
+        except:
+            pass
+
     def on_show_about(self, ev=None):
 
         messagebox.showinfo(
