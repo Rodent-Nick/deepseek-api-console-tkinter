@@ -312,6 +312,21 @@ class MainWin:
         # Then it should be alright if we just initiate this turn
         Td(target=self.require_new_answer, args=(self.entry_input.get('1.0','end'),)).start()
         return
+    
+    """
+        Now here is the deal:
+        1. No secretly inserting... Use standard interface.
+        2. Each line is first checked for NLs. If none found, then print the line, add to linebuf, and done. 
+        3. However, if there is/are NL(s), things will be so shitty.
+            a. First split `linebuf` with NL as delimiter.
+            b. Then you need to **flush** the `linebuf`:
+                (1) Remove the whole line you've just enter. 
+                (2) Process the `linebuf` into `cleanbuf` with no markings and a `tagpairs` list[tuple]
+                (3) Insert the `cleanbuf` content **with an extra NL** (remember? it is just consumed when splitting)
+                (4) Add tags
+            c. repeat the process until `IterationStop`
+        Let's just hope this thing can work. I see no reasons it should not. But who knows.
+    """
             
     def update_dialog(self, msg:str, is_reasoning:str=''):
         self.dialog.config(state='normal')
