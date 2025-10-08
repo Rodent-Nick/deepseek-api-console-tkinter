@@ -7,7 +7,6 @@ from tkinter import messagebox
 from openai import OpenAI, OpenAIError
 import os
 import re
-import re
 
 class KeyWin:
 
@@ -55,7 +54,7 @@ class KeyWin:
 
 class MainWin:
 
-    def __init__(self, font1:str='Calibri', font2:str='Cascadia Code'):
+    def __init__(self, font1:str='Calibri', font2:str='Cascadia Code', font3:str='Arial', text_size:int=12):
 
         self.key:str= ''
         self.base_url:str = 'https://api.deepseek.com'
@@ -71,6 +70,10 @@ class MainWin:
         self.max_token:int = 128000
         self.model_name = 'deepseek-chat'
 
+        self.linebuf = ''
+        self.curline = 1
+        self.is_in_codeblock = False
+
         #==== HERE BEGINS GUI LAYOUT ====
 
         self.root = tk.Tk()
@@ -78,8 +81,8 @@ class MainWin:
         self.root.geometry('1200x600')
         self.root.config(bg='grey')
 
-        self.font_editor_normal = font.Font(family=font2, size=12)
-        self.font_editor_reasoning = font.Font(family=font2, size=12, slant='italic')
+        self.font_editor_normal = font.Font(family=font3, size=12)
+        self.font_editor_reasoning = font.Font(family=font3, size=12, slant='italic')
         self.font_gui_normal = font.Font(family=font1, size=12)
 
         self.pw = tk.PanedWindow(orient='vertical')
@@ -111,6 +114,24 @@ class MainWin:
         self.dialog.tag_config('reasons', foreground='dark green', font=self.font_editor_reasoning)
         self.dialog.tag_config('info', foreground='dark grey')
         self.dialog.tag_config('error', foreground='orange')
+        self.dialog.tag_config('dialog', foreground='light green')
+
+        styles = {
+            "md-h1": {"font": (font3, text_size + 18, "bold")},
+            "md-h2": {"font": (font3, text_size + 12, "bold")},
+            "md-h3": {"font": (font3, text_size + 6, "bold")},
+            "md-h4": {"font": (font3, text_size + 2, "bold")},
+            "md-emph": {"font": (font3, text_size, "bold", "italic")},
+            "md-bold": {"font": (font3, text_size, "bold")},
+            "md-italic": {"font": (font3, text_size, "italic")},
+            "md-icode": {"font": (font2, text_size - 1), "background": "#393939"},
+            "md-bcode": {"font": (font2, text_size - 1), "background": "#393939", "lmargin1":"10px"},
+            "md-bquote": {"background": "#393939", "border": "10px", "lmargin1":"10px"},
+            "md-link": {"foreground": "blue", "underline": True}
+        }
+
+        for tag, config in styles.items():
+            self.dialog.tag_configure(tag, **{k: v for k, v in config.items()})
 
         #==== HERE BEGINS EVENT BINDING ====
 
@@ -140,10 +161,10 @@ class MainWin:
             script_path = os.path.dirname(__file__)
             f = open(f'{script_path}\\key.asc', 'r')
             self.key = f.readline()
-            self.dialog.insert('1.0', 'Standby. API Key loaded.\n\n', 'info')
+            self.dialog_insert('Standby. API Key loaded.\n\n', 'info')
             f.close()
         except FileNotFoundError as e:
-            self.dialog.insert('1.0', f'Standby. No API Key loaded. Reason: No such file (Working at {script_path})\n\n', 'info')
+            self.dialog_insert(f'Standby. No API Key loaded. Reason: No such file (Working at {script_path})\n\n', 'info')
 
     def on_show_about(self, ev=None):
 
@@ -182,10 +203,8 @@ class MainWin:
         self.history.clear()
         self.history_reasoning.clear()
 
-        self.dialog.config(state='normal')
-        self.dialog.delete('1.0','end')
-        self.dialog.insert('1.0', 'Standby.\n\n', 'info')
-        self.dialog.config(state='disabled')
+        self.dialog_clear()
+        self.dialog_insert('Standby. History Cleared.\n', 'info')
 
     def input_key(self, ev=None):
         
@@ -203,14 +222,12 @@ class MainWin:
 
         self.entry_input.config(state='disabled')
         self.entry_btn.config(state='disabled')
-        self.update_dialog('[Connecting to %s with key ****%s]\n'%(self.base_url, self.key[-4:]), 'info')
+        self.dialog_insert('[Connecting to %s with key ****%s]\n'%(self.base_url, self.key[-4:]), 'info')
 
         self.root.title('DeepSeek API Console - Obtaining Client ...')
 
         self.client = OpenAI(api_key=self.key, base_url=self.base_url)
-        self.dialog.config(state='normal')
-        self.update_dialog('[Established]\n[Try using this connection to begin chat]\n', 'info')
-        self.dialog.config(state='disabled')
+        self.dialog_insert('[Established]\n[Try using this connection to begin chat]\n', 'info')
 
         self.require_new_answer(msg)
 
@@ -221,8 +238,8 @@ class MainWin:
         self.entry_input.config(state='disabled')
         self.entry_btn.config(state='disabled')
 
-        self.update_dialog('[USER]', 'info')
-        self.update_dialog('\n%s\n'%(msg,))
+        self.dialog_insert('[USER]\n', 'info')
+        self.dialog_insert('%s\n'%(msg,), 'dialog')
 
         try:
             response = self.client.chat.completions.create(
@@ -240,31 +257,33 @@ class MainWin:
                 llm_name = 'DEEPSEEK-CHAT'
             else:
                 llm_name = 'DEEPSEEK-REASONER'
-            self.update_dialog('[%s]\n'%(llm_name,), 'info')
+            self.dialog_insert('[%s]\n'%(llm_name,), 'info')
 
             for chunk in response:
                 if self.model_name == 'deepseek-reasoner' and chunk.choices[0].delta.reasoning_content is not None:
                     reasoning_content = chunk.choices[0].delta.reasoning_content
                     raw_reasoning += reasoning_content
-                    self.update_dialog(reasoning_content, 'reasons')
+                    self.dialog_insert(reasoning_content, 'reasons')
                 if chunk.choices[0].delta.content:
                     
                     if last_is_reasons and self.model_name == 'deepseek-reasoner':
                         last_is_reasons = False
-                        self.update_dialog('\n\n')
+                        self.dialog_insert('\n\n')
                     
                     content = chunk.choices[0].delta.content
                     raw_response += content
-                    self.update_dialog(content)
+                    self.dialog_insert(content, 'dialog')
+            
+            self.dialog_insert('\n', 'dialog')
         
         except OpenAIError as e:
-            self.update_dialog(f'<!> ERROR: {e.message}\n\n', 'error')
+            self.dialog_insert(f'<!> ERROR: {e.message}\n\n', 'error')
             self.key = ''
             self.client.close()
             self.client = None
 
         except e:
-            self.update_dialog(f'\n[AN UNKNOWN ERROR HAS OCCURRED.]\n\n', 'error')
+            self.dialog_insert(f'\n[AN UNKNOWN ERROR HAS OCCURRED.]\n\n', 'error')
 
             self.entry_input.config(state='normal')
             self.entry_input.delete('1.0', 'end')
@@ -284,7 +303,7 @@ class MainWin:
                 self.history_reasoning.append(raw_reasoning)
         
         finally:
-            self.update_dialog('\n\n*** [END OF RESPONSE] ***\n\n', 'info')
+            self.dialog_insert('\n\n=== [END OF RESPONSE] ===\n\n', 'info')
             self.entry_input.config(state='normal')
             self.entry_btn.config(state='normal')
             self.root.title('DeepSeek API Console')
@@ -317,7 +336,7 @@ class MainWin:
     
     """
         Now here is the deal:
-        1. No secretly inserting... Use standard interface.
+        1. No secretly inserting... Use standard interface, whether insertion or deletion.
         2. Each line is first checked for NLs. If none found, then print the line, add to linebuf, and done. 
         3. However, if there is/are NL(s), things will be so shitty.
             a. First split `linebuf` with NL as delimiter.
@@ -326,6 +345,7 @@ class MainWin:
                 (2) Process the `linebuf` into `cleanbuf` with no markings and a `tagpairs` list[tuple]
                 (3) Insert the `cleanbuf` content **with an extra NL** (remember? it is just consumed when splitting)
                 (4) Add tags
+                (5) `curline` += 1
             c. repeat the process until `IterationStop`
         Let's just hope this thing can work. I see no reasons it should not. But who knows.
     """
@@ -338,6 +358,9 @@ class MainWin:
             self.dialog.insert('end', msg, is_reasoning)
         self.dialog.see('end')
         self.dialog.config(state='disabled')
+
+        self.linebuf = ''
+        self.curline = 1
 
 if __name__ == '__main__':
 
