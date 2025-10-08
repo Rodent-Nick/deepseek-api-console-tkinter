@@ -349,14 +349,117 @@ class MainWin:
             c. repeat the process until `IterationStop`
         Let's just hope this thing can work. I see no reasons it should not. But who knows.
     """
-            
-    def update_dialog(self, msg:str, is_reasoning:str=''):
-        self.dialog.config(state='normal')
-        if is_reasoning == '':
-            self.dialog.insert('end', msg)
+
+    def dialog_insert(self, msg:str, tag:str=''):
+        
+        has_nl = '\n' in msg
+
+        if not has_nl:
+
+            self.dialog.config(state='normal')
+            self.dialog.insert('end', msg, tag)
+            self.dialog.config(state='disabled')
+
+            self.linebuf += msg
+
         else:
-            self.dialog.insert('end', msg, is_reasoning)
-        self.dialog.see('end')
+
+            msgs = [x for x in msg.split('\n')]
+
+            for m in msgs:
+
+                self.linebuf += m + '\n'
+                tagpairs:list[tuple] = []
+
+                self.dialog.config(state='normal')
+                self.dialog.delete(f'{self.curline}.0', f'{self.curline}.{len(self.linebuf)}')
+
+                self.dialog.config(state='disabled')
+
+                general_tag = ''
+
+                if self.linebuf.startswith('# '):
+                    self.linebuf = self.linebuf[2:]
+                    general_tag = 'md-h1'
+                    
+                elif self.linebuf.startswith('## '):
+                    self.linebuf = self.linebuf[3:]
+                    general_tag = 'md-h2'
+                    
+                elif self.linebuf.startswith('### '):
+                    self.linebuf = self.linebuf[4:]
+                    general_tag = 'md-h3'
+                    
+                elif self.linebuf.startswith('#### '):
+                    self.linebuf = self.linebuf[5:]
+                    general_tag = 'md-h4'
+                    
+                elif self.linebuf.startswith('> '):
+                    self.linebuf = self.linebuf[2:]
+                    general_tag = 'md-bquote'
+                    
+                elif self.linebuf.startswith('```'):
+                    self.linebuf = '\n'
+                    self.is_in_codeblock = not self.is_in_codeblock
+
+                if not self.is_in_codeblock: # because everything in codeblock should be kept as-is
+                    
+                    last_stop = 0
+                    matches = re.finditer(r'\*\*(.*?)\*\*|\*(.*?)\*|`(.*?)`', self.linebuf)
+                    for match in matches:
+
+                        tag_name = ''
+                        offset = 0
+
+                        if match.group().startswith('***'):
+                            tag_name = 'md-emph'
+                            offset = 3
+                        elif match.group().startswith('**'):
+                            tag_name = 'md-bold'
+                            offset = 2
+                        elif match.group().startswith('*'):
+                            tag_name = 'md-italic'
+                            offset = 1
+                        elif match.group().startswith('`'):
+                            tag_name = 'md-icode'
+                            offset = 1
+
+                        tagpairs.append((self.linebuf[last_stop:match.start()], tag))
+                        tagpairs.append((self.linebuf[match.start() + offset:match.end() - offset], tag_name))
+                        last_stop = match.end()
+                    
+                    tagpairs.append((self.linebuf[last_stop:], tag))
+
+                    self.dialog.config(state='normal')
+
+                    for i in tagpairs:
+                        self.dialog.insert('end', i[0], i[1])
+
+                    if general_tag != '':
+                        self.dialog.tag_add(general_tag, f'{self.curline}.0', f'{self.curline}.end')
+
+                    self.dialog.see('end')
+
+                    self.dialog.config(state='disabled')
+                
+                else:
+
+                    self.dialog.config(state='normal')
+
+                    self.dialog.insert('end', self.linebuf, tag)
+                    self.dialog.tag_add('md-bcode', f'{self.curline}.0', f'{self.curline}.{len(self.linebuf)}')
+                    self.dialog.see('end')
+
+                    self.dialog.config(state='disabled')
+
+                self.linebuf = ''
+                self.curline += 1
+
+
+    def dialog_clear(self):
+        
+        self.dialog.config(state='normal')
+        self.dialog.delete('1.0', 'end')
         self.dialog.config(state='disabled')
 
         self.linebuf = ''
